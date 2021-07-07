@@ -1,0 +1,164 @@
+<html><head>
+<title>TextAid Options</title>
+<style>
+.note {
+  background-color: yellow;
+}
+</style>
+<script src="options.js"></script>
+</head>
+
+<body>
+
+<p>Set the URL for the webserver to contact:<br>
+<input type="text" id="url" size="128">
+
+<p>Set the username and password for the URL (optional):<br>
+Username: <input type="text" id="username" size="32"> &nbsp; &nbsp;
+Password: <input type="password" id="password" size="32">
+
+<p><label for="strip"><input type="checkbox" id="strip">&nbsp;Strip tailing newlines from the end of the returning text.</label>
+
+<p>Key binding for edit action:
+<label for="shift"><input type="checkbox" id="shift">shift</label> +
+<label for="ctrl"><input type="checkbox" id="ctrl">ctrl</label> +
+<label for="alt"><input type="checkbox" id="alt">alt</label> +
+<select id="keycode">
+<option value="0">&lt;None&gt;
+<option value="65">A
+<option value="66">B
+<option value="67">C
+<option value="68">D
+<option value="69">E
+<option value="70">F
+<option value="71">G
+<option value="72">H
+<option value="73">I
+<option value="74">J
+<option value="75">K
+<option value="76">L
+<option value="77">M
+<option value="78">N
+<option value="79">O
+<option value="80">P
+<option value="81">Q
+<option value="82">R
+<option value="83">S
+<option value="84">T
+<option value="85">U
+<option value="86">V
+<option value="87">W
+<option value="88">X
+<option value="89">Y
+<option value="90">Z
+<option value="48">0
+<option value="49">1
+<option value="50">2
+<option value="51">3
+<option value="52">4
+<option value="53">5
+<option value="54">6
+<option value="55">7
+<option value="56">8
+<option value="57">9
+<option value="8">BACKSPACE
+<option value="46">DELETE
+<option value="40">DOWN
+<option value="35">END
+<option value="13">ENTER
+<option value="27">ESC
+<option value="43">EXECUTE
+<option value="36">HOME
+<option value="45">INSERT
+<option value="37">LEFT
+<option value="34">PAGEDOWN
+<option value="33">PAGEUP
+<option value="19">PAUSEBREAK
+<option value="42">PRINTSCREEN
+<option value="39">RIGHT
+<option value="41">SELECT
+<option value="44">SNAPSHOT
+<option value="32">SPACE
+<option value="9">TAB
+<option value="38">UP
+<option value="112">F1
+<option value="113">F2
+<option value="114">F3
+<option value="115">F4
+<option value="116">F5
+<option value="117">F6
+<option value="118">F7
+<option value="119">F8
+<option value="120">F9
+<option value="121">F10
+<option value="122">F11
+<option value="123">F12
+<option value="124">F13
+<option value="125">F14
+<option value="126">F15
+<option value="127">F16
+<option value="96">NUM 0
+<option value="97">NUM 1
+<option value="98">NUM 2
+<option value="99">NUM 3
+<option value="100">NUM 4
+<option value="101">NUM 5
+<option value="102">NUM 6
+<option value="103">NUM 7
+<option value="104">NUM 8
+<option value="105">NUM 9
+<option value="106">NUM *
+<option value="107">NUM +
+<option value="109">NUM -
+<option value="110">NUM .
+<option value="111">NUM /
+<option value="186">;
+<option value="187">=
+<option value="188">,
+<option value="189">-
+<option value="190">.
+<option value="191">/
+<option value="192">`
+<option value="219">[
+<option value="220">\
+<option value="221">]
+<option value="22">'
+</select>
+
+<p><button class='ok'>OK</button> &nbsp;
+<button class='cancel'>Cancel</button> &nbsp;
+<button class='apply'>Apply</button> &nbsp;
+<span id="status">&nbsp;</span>
+
+<p>Notes:
+
+<p>The URL above can be for any CGI that you want to use to filter the textarea's
+contents.  It will receive the text as the body content of a POST request.  The
+values "id" and "url" will be appended to the URL as GET-style variables, which
+allows your script to see what webpage and textarea ID is being edited (should it
+wish to differentiate its actions based upon that information).  The CGI should
+output the new text content as its only output.  If the HTTP status returned is
+not "200", an error will pop-up instead of the textarea being updated.
+
+<p>This extension supports HTTP "basic authentication" for the specified URL.
+If the request requires a username and password, enter them.  Otherwise feel
+free to leave them blank.
+
+<p>If you want a simple file-editing server that you can run on your local
+system, you can download one from here:
+<a href="http://opencoder.net/edit-server">edit-server perl script</a>.
+This server is configured to use gvim by default, but you can tweak it to run
+emacs or any other graphical editor.  It is also multi-threaded, so it allows
+you to edit multiple textareas at the same time.  After running it, you can
+access the server via an URL of: <input value="http://127.0.0.1:8888/" READONLY
+/> (8888 is the default port number). It also requires you to set the username
+and password fields (by default), which are saved into the file
+~/.edit-server-auth on first access and verified thereafter.
+
+<p>You should also be able to use the python server from the
+<a href="http://github.com/stsquad/emacs_chrome/tree/master/servers/">emacs_chrome</a>
+project.  This server is configured to use emacs by default.  Note that it handles
+only one request at a time, so you cannot edit multiple textareas at once.  After
+running it, you can access the server via an URL of: <input value="http://127.0.0.1:9292/" READONLY />
+
+</body> </html>
