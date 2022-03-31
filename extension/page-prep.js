@@ -46,10 +46,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
     }
     delete active_reqs[request.req];
     var ta = document.getElementById(request.id);
-    if (ta)
+    if (ta) {
       ta.value = request.text;
-    else
+    } else {
       alert('Unable to save changes for textarea ' + request.id);
+    }
   }
 });
 
