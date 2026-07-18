@@ -14,7 +14,7 @@ Server Requirement
 
 To use this extension requires that you run some kind of HTTP server, which is
 typically done on your local host for security reasons. The "servers" directory
-has a perl script that can be used as a stand-alone server. If you use the
+has a couple scripts that can be used as a stand-alone server. If you use the
 extension to edit secret info, be sure that you've reviewed your server setup
 for safety (particularly the temp-file setup and connection auth). You should
 also consider cleaning up the temp dir more rapidly (either by setting a 0-hour
