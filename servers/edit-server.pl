@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # A simple web server that just listens for textarea filter requests and runs
 # an editor to manipulate the text.  Is intended to be used with the
@@ -8,7 +8,7 @@
 # warranty.  If you choose to edit private data with it, it is up to you to
 # make certain that the software is configured to keep your information safe!
 #
-# NOTE:  It is safest to avoid using this on a shared system.  While it limits
+# NOTE: It is safest to avoid using this on a shared system.  While it limits
 # connections to localhost and requires the use of a username & password (by
 # default), you'd need to do a security audit to make sure that it was setup
 # safely in a shared environment, and that is not very easy to do.
@@ -20,6 +20,8 @@ use Socket;
 use IO::Select;
 use File::Temp;
 use Getopt::Long;
+
+# --- Configuration ---
 
 # If you don't want to require authentication, set $REQUIRE_AUTH to 0.
 # When it is set to 1, the first authenticated request that is received
@@ -39,16 +41,17 @@ our $LOCALHOST_ONLY = 1;
 
 # Configure the program that you want to run to handle the requests.
 # This editor invocation must NOT return control to this script until
-# you are done editing.
+# you are done editing! Note that you can put additional munging into
+# the munge_text function.
 our $EDITOR_CMD = '/usr/bin/rgvim -f "%s"';
 #our $EDITOR_CMD = '/usr/bin/emacsclient -c "%s"';
 
 # The settings to configure the temp dir and how soon old files are removed.
-# If TMPTEMPLATE contains the string -URL64-, then up to 64 chars of the munged
+# If $TMP_TEMPLATE contains the string -URL64-, then up to 64 chars of the munged
 # URL for the textarea's page will be included in the tmp file's filename.
-our $TMPDIR = '/tmp';
-our $TMPTEMPLATE = 'edit-server-URL64-XXXXXX';
-our $TMPSUFFIX = '.txt';
+our $TMP_DIR = '/tmp';
+our $TMP_TEMPLATE = 'edit-server-URL64-XXXXXX';
+our $TMP_SUFFIX = '.txt';
 our $CLEAN_AFTER_HOURS = 4;
 
 &Getopt::Long::Configure('bundling');
@@ -121,7 +124,7 @@ sub do_edit
 	$header{lc($name)} = $value;
 	print "Header: \L$name\E = $value\n" if $verbosity >= 2;
     }
-    print "-------------------------------------------------------------------\n" if $verbosity >= 2;
+    print '-' x 67, "\n" if $verbosity >= 2;
 
     if ($REQUIRE_AUTH) {
 	my $authorized;
@@ -176,12 +179,12 @@ sub do_edit
     }
 
     my($query) = $path =~ /\?(.+)/;
-    (my $template_fn = $TMPTEMPLATE) =~ s/-URL(\d+)-/ '-' . url_filename($query, $1) . '-' /e;
+    (my $template_fn = $TMP_TEMPLATE) =~ s/-URL(\d+)-/ '-' . url_filename($query, $1) . '-' /e;
 
     my $tmp = new File::Temp(
 	TEMPLATE => $template_fn,
-	DIR => $TMPDIR,
-	SUFFIX => $TMPSUFFIX,
+	DIR => $TMP_DIR,
+	SUFFIX => $TMP_SUFFIX,
 	UNLINK => 0,
     );
     my $name = $tmp->filename;
@@ -204,13 +207,18 @@ sub do_edit
     close FILE;
     close $fh;
 
+    clean_old_tempfiles();
+}
+
+sub clean_old_tempfiles
+{
     # Clean-up old tmp files that have been around for a few hours.
-    if (opendir(DP, $TMPDIR)) {
-	(my $match = quotemeta($TMPTEMPLATE . $TMPSUFFIX)) =~ s/(.*[^X])(X+)/ $1 . ('\w' x length($2)) /e;
+    if (opendir(DP, $TMP_DIR)) {
+	(my $match = quotemeta($TMP_TEMPLATE . $TMP_SUFFIX)) =~ s/(.*[^X])(X+)/ $1 . ('\w' x length($2)) /e;
 	$match =~ s/\\-URL\d+\\-/-.*-/;
 	print "Match: $match\n" if $verbosity >= 3;
 	foreach my $fn (grep /^$match$/o, readdir DP) {
-	    $fn = "$TMPDIR/$fn";
+	    $fn = "$TMP_DIR/$fn";
 	    print "Fn: $fn\n" if $verbosity >= 3;
 	    my $age = -M $fn;
 	    if ($age > $CLEAN_AFTER_HOURS/24) {
