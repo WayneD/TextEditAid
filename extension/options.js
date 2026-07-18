@@ -12,67 +12,68 @@ function save_options_and_close()
   close_options();
 }
 
-// Save options to localStorage.
+// Save options to chrome.storage.local instead of localStorage.
 function save_options()
 {
-  localStorage['base_url'] = document.getElementById('url').value;
+  var data = {};
+  data['base_url'] = document.getElementById('url').value;
 
   var el = document.getElementById('keycode');
-  localStorage['keycode'] = el.children[el.selectedIndex].value;
+  data['keycode'] = el.children[el.selectedIndex].value;
 
   for (var j in chkBoxes) {
     var chk = chkBoxes[j];
-    localStorage[chk] = document.getElementById(chk).checked ? 1 : 0;
+    data[chk] = document.getElementById(chk).checked ? 1 : 0;
   }
 
   for (var j in extraValues) {
     var name = extraValues[j];
-    localStorage[name] = document.getElementById(name).value;
+    data[name] = document.getElementById(name).value;
   }
 
-  // Update status to let user know options were saved.
-  var status = document.getElementById('status');
-  status.innerHTML = '<span class="note">Options Saved.</span>';
-  setTimeout(function() { status.innerHTML = '&nbsp;' }, 3000);
+  chrome.storage.local.set(data, function() {
+    // Update status to let user know options were saved.
+    var status = document.getElementById('status');
+    status.innerHTML = '<span class="note">Options Saved.</span>';
+    setTimeout(function() { status.innerHTML = '&nbsp;' }, 3000);
+  });
 }
 
 function load_options()
 {
-  var url = localStorage['base_url'];
-  if (!url)
-    url = '';
+  chrome.storage.local.get(null, function(data) {
+    var url = data.base_url || '';
 
-  for (var j in chkBoxes) {
-    var chk = chkBoxes[j];
-    var val = localStorage[chk];
-    document.getElementById(chk).checked = val && val == 1 ? 1 : 0;
-  }
-
-  var keycode = localStorage['keycode'];
-  if (keycode == null)
-    keycode = 0;
-  var el = document.getElementById('keycode');
-  for (var i = 0; i < el.children.length; i++) {
-    if (el.children[i].value == keycode) {
-      el.children[i].selected = 1;
-      break;
+    for (var j in chkBoxes) {
+      var chk = chkBoxes[j];
+      var val = data[chk];
+      document.getElementById(chk).checked = val && val == 1 ? 1 : 0;
     }
-  }
 
-  for (var j in extraValues) {
-    var name = extraValues[j];
-    var val = localStorage[name];
-    if (!val)
-      val = '';
-    el = document.getElementById(name);
-    el.value = val;
-  }
+    var keycode = data.keycode;
+    if (keycode == null)
+      keycode = 0;
+    var el = document.getElementById('keycode');
+    for (var i = 0; i < el.children.length; i++) {
+      if (el.children[i].value == keycode) {
+        el.children[i].selected = 1;
+        break;
+      }
+    }
 
-  el = document.getElementById('url');
-  el.value = url;
-  el.focus();
+    for (var j in extraValues) {
+      var name = extraValues[j];
+      var val = data[name] || '';
+      el = document.getElementById(name);
+      el.value = val;
+    }
 
-  check_url();
+    el = document.getElementById('url');
+    el.value = url;
+    el.focus();
+
+    check_url();
+  });
 }
 
 function check_url()

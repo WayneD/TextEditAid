@@ -1,5 +1,5 @@
 var last_sel = null, textarea_has_focus = false, key_bind = {}, counter = 0;
-var active_reqs = Array();
+var active_reqs = [];
 
 // Add capturing focus/blur listeners to the body so we can respond to all
 // textarea-focus-related events, even if the textarea gets created by JS.
@@ -11,8 +11,8 @@ function got_focus(e)
   if (e.target.type == 'textarea') {
     last_sel = e.target;
     textarea_has_focus = true;
-    chrome.extension.sendRequest({msg: 'showIcon'}, function(response) {
-      key_bind = response;
+    chrome.runtime.sendMessage({msg: 'showIcon'}, function(response) {
+      key_bind = response || {};
     });
   }
 }
@@ -21,15 +21,21 @@ function got_blur(e)
 {
   if (e.target.type == 'textarea') {
     textarea_has_focus = false;
-    chrome.extension.sendRequest({msg: 'hideIcon'});
+    chrome.runtime.sendMessage({msg: 'hideIcon'});
   }
 }
 
 // Handle requests to get/set a textarea's value.
-chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   //console.log('request: ' + JSON.stringify(request));
   if (!request.textaid)
     return;
+
+  if (request.textaid == 'error') {
+    alert(request.message);
+    return;
+  }
+
   if (request.textaid == 'get') {
     // last_sel will point to the object that caused the icon to appear.
     if (last_sel === null)
@@ -67,6 +73,6 @@ document.addEventListener('keyup', function(e) {
     active_reqs[req] = 1;
     if (!last_sel.id) // Each textarea must have an id.
       last_sel.id = '_textaid_' + req + '_';
-    chrome.extension.sendRequest({msg: 'edit', id: last_sel.id, req: req, url: location.href, text: last_sel.value});
+    chrome.runtime.sendMessage({msg: 'edit', id: last_sel.id, req: req, url: location.href, text: last_sel.value});
   }
 }, false);

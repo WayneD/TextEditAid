@@ -1,12 +1,12 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "TextEditAid",
-  "version": "1.0.8",
+  "version": "1.1.1",
   "description": "Edit (or just filter) the currently selected textarea using a web request.",
   "background": {
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
-  "page_action": {},
+  "action": {},
   "content_scripts": [
     {
       "js": [ "page-prep.js" ],
@@ -17,6 +17,9 @@
   ],
   "options_page": "options.html",
   "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
     "http://*/*",
     "https://*/*"
   ],
