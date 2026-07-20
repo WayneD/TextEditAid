@@ -47,11 +47,14 @@ our $EDITOR_CMD = '/usr/bin/rgvim -f "%s"';
 #our $EDITOR_CMD = '/usr/bin/emacsclient -c "%s"';
 
 # The settings to configure the temp dir and how soon old files are removed.
-# If $TMP_TEMPLATE contains the string -URL64-, then up to 64 chars of the munged
-# URL for the textarea's page will be included in the tmp file's filename.
+# If $TMP_URL_LIMIT is a non-zero number, a munged version of the textarea's
+# page URL will be appended to the $TMP_PREFIX string, along with a trailing
+# dash. The number limits how many characters long the URL string can be.
 our $TMP_DIR = '/tmp';
-our $TMP_TEMPLATE = 'edit-server-URL64-XXXXXX';
+our $TMP_PREFIX = 'edit-server-';
 our $TMP_SUFFIX = '.txt';
+our $TMP_URL_LIMIT = 64; # Set to 0 to disable, or set a limit
+our $TMP_UNIQUE_LEN = 8; # The random chars portion of the temp name
 our $CLEAN_AFTER_HOURS = 4;
 
 &Getopt::Long::Configure('bundling');
@@ -179,10 +182,12 @@ sub do_edit
     }
 
     my($query) = $path =~ /\?(.+)/;
-    (my $template_fn = $TMP_TEMPLATE) =~ s/-URL(\d+)-/ '-' . url_filename($query, $1) . '-' /e;
+    my $template_fn = $TMP_PREFIX;
+    $template_fn .= url_filename($query, $TMP_URL_LIMIT) . '-' if $TMP_URL_LIMIT;
 
+    $^T = time; # We want current age for later -M measurement.
     my $tmp = new File::Temp(
-	TEMPLATE => $template_fn,
+	TEMPLATE => $template_fn . ('X' x $TMP_UNIQUE_LEN),
 	DIR => $TMP_DIR,
 	SUFFIX => $TMP_SUFFIX,
 	UNLINK => 0,
@@ -214,18 +219,21 @@ sub clean_old_tempfiles
 {
     # Clean-up old tmp files that have been around for a few hours.
     if (opendir(DP, $TMP_DIR)) {
-	(my $match = quotemeta($TMP_TEMPLATE . $TMP_SUFFIX)) =~ s/(.*[^X])(X+)/ $1 . ('\w' x length($2)) /e;
-	$match =~ s/\\-URL\d+\\-/-.*-/;
+	my $match = quotemeta($TMP_PREFIX);
+	$match .= '.*-' if $TMP_URL_LIMIT;
+	$match .= "\\w{$TMP_UNIQUE_LEN}" . quotemeta($TMP_SUFFIX);
 	print "Match: $match\n" if $verbosity >= 3;
 	foreach my $fn (grep /^$match$/o, readdir DP) {
 	    $fn = "$TMP_DIR/$fn";
-	    print "Fn: $fn\n" if $verbosity >= 3;
 	    my $age = -M $fn;
-	    if ($age > $CLEAN_AFTER_HOURS/24) {
+	    my $act;
+	    if ($age >= $CLEAN_AFTER_HOURS/24) {
 		unlink $fn;
+		$act = 'Removed';
 	    } else {
-		print "Age: $age\n" if $verbosity >= 3;
+		$act = 'Kept';
 	    }
+	    print "$act $fn (Age: ", sprintf('%.4f', $age * 24), " hours)\n" if $verbosity >= 3;
 	}
 	closedir DP;
     }

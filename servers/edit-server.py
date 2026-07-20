@@ -16,7 +16,6 @@
 import os
 import sys
 import time
-import glob
 import shlex
 import urllib.parse
 import tempfile
@@ -53,13 +52,13 @@ EDITOR_CMD = '/usr/bin/rgvim -f SAFE_ARG'
 #EDITOR_CMD = None # Don't write the tmp file or run a program
 
 # The settings to configure the temp dir and how soon old files are removed.
-# If TMP_PREFIX contains the string -URL64- (or any number), then the chars
-# of the munged URL for the textarea's page will be included in the tmp file's
-# filename, with a maximum length matching the specified number.
-TMP_MATCH_RE = re.compile(r'-URL(\d+)-')
+# If TMP_URL_LIMIT is a non-zero number, a munged version of the textarea's
+# page URL will be appended to the TMP_PREFIX string, along with a trailing
+# dash. The number limits how many characters long the URL string can be.
 TMP_DIR = '/tmp'
-TMP_PREFIX = 'edit-server-URL64-'
+TMP_PREFIX = 'edit-server-'
 TMP_SUFFIX = '.txt'
+TMP_URL_LIMIT = 64 # Set to 0 to disable, or set a limit
 CLEAN_AFTER_HOURS = 4
 
 def main():
@@ -103,11 +102,11 @@ class EditServerHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if args.verbose >= 1:
-            print(f"Path: {self.path}")
+            print("Path:", self.path)
 
         if args.verbose >= 2:
             for key, value in self.headers.items():
-                print(f"Header: {key.lower()} = {value}")
+                print("Header:", key.lower(), '=', value)
             print("-" * 67)
 
         # Authentication check
@@ -200,11 +199,9 @@ class EditServerHandler(BaseHTTPRequestHandler):
 def write_temp_file(url_path, field_bytes):
     # Parse query string to construct filename prefix
     prefix = TMP_PREFIX
-    m = TMP_MATCH_RE.search(prefix)
-    if m:
+    if TMP_URL_LIMIT:
         parsed_url = urllib.parse.urlparse(url_path)
-        url_part = url_filename(parsed_url.query, int(m.group(1)))
-        prefix = TMP_MATCH_RE.sub('-' + url_part + '-', prefix)
+        prefix = prefix + url_filename(parsed_url.query, TMP_URL_LIMIT) + '-'
 
     # Create temporary file
     try:
@@ -230,25 +227,29 @@ def clean_old_tempfiles():
     """Clean up old temp files that have been around for a few hours."""
     cutoff_time = time.time() - (CLEAN_AFTER_HOURS * 3600)
     # Match the pattern of our temporary files
-    search_pattern = os.path.join(TMP_DIR, f"edit-server-*{TMP_SUFFIX}")
+    match = re.escape(TMP_PREFIX)
+    if TMP_URL_LIMIT:
+        match = match + '.*-'
+    match = match + r'\w{6,}' + re.escape(TMP_SUFFIX)
 
     if args.verbose >= 3:
-        print(f"Match: {search_pattern}")
+        print(f"Match:", match)
 
-    for fn in glob.glob(search_pattern):
-        if args.verbose >= 3:
-            print(f"Fn: {fn}")
+    tmp_name_re = re.compile('^' + match + '$')
+    with os.scandir(TMP_DIR) as entries:
+        tmp_files = [entry.path for entry in entries if entry.is_file() and tmp_name_re.match(entry.name)]
 
+    for fn in tmp_files:
         try:
             mtime = os.path.getmtime(fn)
             age_hours = (time.time() - mtime) / 3600
-            if age_hours > CLEAN_AFTER_HOURS:
+            if age_hours >= CLEAN_AFTER_HOURS:
                 os.remove(fn)
-                if args.verbose >= 3:
-                    print(f"Removed {fn} (Age: {age_hours:.2f} hours)")
+                act = 'Removed'
             else:
-                if args.verbose >= 3:
-                    print(f"Kept {fn} (Age: {age_hours:.2f} hours)")
+                act = 'Kept'
+            if args.verbose >= 3:
+                print(f"{act} {fn} (Age: {age_hours:.4f} hours)")
         except OSError as e:
             if args.verbose >= 3:
                 print(f"Failed to check/remove {fn}: {e}")
@@ -257,19 +258,19 @@ def clean_old_tempfiles():
 def url_filename(query_string, max_chars):
     """Parses the URL from the query string and creates a safe filename."""
     if args.verbose >= 4:
-        print(f"Query: {query_string}")
+        print("Query:", query_string)
 
     if query_string:
         query_params = urllib.parse.parse_qs(query_string)
         if 'url' in query_params:
             val = query_params['url'][0]
             if args.verbose >= 4:
-                print(f"Before: {val}")
+                print("Before:", val)
             val = re.sub(r'^https?://', '', val)
             val = re.sub(r'[^\-\w.]', '_', val)
             val = val[:max_chars]
             if args.verbose >= 4:
-                print(f"After: {val}")
+                print("After:", val)
             return val
 
     return 'unknown-url'
