@@ -97,6 +97,7 @@ class EditServerHandler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'text/plain')
         self.end_headers()
         self.wfile.write(b"Server is up and running. To use it, issue a POST request with the file to edit as the content body.")
+
     def do_HEAD(self):
         self.do_GET()
 
